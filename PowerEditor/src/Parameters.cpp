@@ -189,8 +189,8 @@ static const WinMenuKeyDefinition winKeyDefs[] =
 	{ VK_C,       IDM_EDIT_COLUMNMODE,                          false, true,  false, nullptr },
 	{ VK_NULL,    IDM_EDIT_CHAR_PANEL,                          false, false, false, L"Toggle Character Panel" },
 	{ VK_NULL,    IDM_EDIT_CLIPBOARDHISTORY_PANEL,              false, false, false, L"Toggle Clipboard History" },
-	{ VK_NULL,    IDM_EDIT_SETREADONLY,                         false, false, false, nullptr },
-	{ VK_NULL,    IDM_EDIT_CLEARREADONLY,                       false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_TOGGLEREADONLY,                         false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_TOGGLESYSTEMREADONLY,                       false, false, false, nullptr },
 	{ VK_F,       IDM_SEARCH_FIND,                              true,  false, false, nullptr },
 	{ VK_F,       IDM_SEARCH_FINDINFILES,                       true,  false, true,  nullptr },
 	{ VK_F3,      IDM_SEARCH_FINDNEXT,                          false, false, false, nullptr },
@@ -2449,7 +2449,12 @@ bool NppParameters::getSessionFromXmlTree(TiXmlDocument *pSessionDoc, Session& s
 					if (boolStrPinned)
 						isPinned = _wcsicmp(L"yes", boolStrPinned) == 0;
 
-					sessionFileInfo sfi(fileName, langName, encStr ? encoding : -1, isUserReadOnly, isPinned, position, pBackupFilePath, fileModifiedTimestamp, mapPosition);
+					bool isUntitleTabRenamed = false;
+					const wchar_t* boolStrTabRenamed = (childNode->ToElement())->Attribute(L"untitleTabRenamed");
+					if (boolStrTabRenamed)
+						isUntitleTabRenamed = _wcsicmp(L"yes", boolStrTabRenamed) == 0;
+
+					sessionFileInfo sfi(fileName, langName, encStr ? encoding : -1, isUserReadOnly, isPinned, isUntitleTabRenamed, position, pBackupFilePath, fileModifiedTimestamp, mapPosition);
 
 					const wchar_t* intStrTabColour = (childNode->ToElement())->Attribute(L"tabColourId");
 					if (intStrTabColour)
@@ -3674,6 +3679,9 @@ void NppParameters::writeSession(const Session & session, const wchar_t *fileNam
 				(fileNameNode->ToElement())->SetAttribute(L"tabColourId", static_cast<int32_t>(viewSessionFiles[i]._individualTabColour));
 				(fileNameNode->ToElement())->SetAttribute(L"RTL", viewSessionFiles[i]._isRTL ? L"yes" : L"no");
 				(fileNameNode->ToElement())->SetAttribute(L"tabPinned", viewSessionFiles[i]._isPinned ? L"yes" : L"no");
+				// Save this info only when it's an untitled entry
+				if (viewSessionFiles[i]._isUntitledTabRenamed)
+					(fileNameNode->ToElement())->SetAttribute(L"untitleTabRenamed", L"yes");
 
 				// docMap 
 				(fileNameNode->ToElement())->SetAttribute(L"mapFirstVisibleDisplayLine", _i64tot(static_cast<LONGLONG>(viewSessionFiles[i]._mapPos._firstVisibleDisplayLine), szInt64, 10));
@@ -5547,6 +5555,10 @@ void NppParameters::feedGUIParameters(TiXmlNode *node)
 			val = element->Attribute(L"addNewDocumentOnStartup");
 			if (val)
 				_nppGUI._newDocDefaultSettings._addNewDocumentOnStartup = (lstrcmp(val, L"yes") == 0);
+
+			val = element->Attribute(L"useContentAsTabName");
+			if (val)
+				_nppGUI._newDocDefaultSettings._useContentAsTabName = (lstrcmp(val, L"yes") == 0);
 		}
 
 		else if (!lstrcmp(nm, L"langsExcluded"))
@@ -5931,7 +5943,11 @@ void NppParameters::feedGUIParameters(TiXmlNode *node)
 			{
 				const wchar_t* val = n->Value();
 				if (val)
-					_nppGUI._autoUpdateOpt._doAutoUpdate = (!lstrcmp(val, L"yes"))?false:true;
+				{
+					// for backward compatibility with older configs
+					_nppGUI._autoUpdateOpt._doAutoUpdate = (!lstrcmp(val, L"yes")) ? 
+						NppGUI::AutoUpdateMode::autoupdate_disabled : NppGUI::AutoUpdateMode::autoupdate_on_startup;
+				}
 
 				int i;
 				val = element->Attribute(L"intervalDays", &i);
@@ -5941,6 +5957,10 @@ void NppParameters::feedGUIParameters(TiXmlNode *node)
 				val = element->Attribute(L"nextUpdateDate");
 				if (val)
 					_nppGUI._autoUpdateOpt._nextUpdateDate = Date(val);
+
+				val = element->Attribute(L"autoUpdateMode", &i);
+				if (val)
+					_nppGUI._autoUpdateOpt._doAutoUpdate = static_cast<NppGUI::AutoUpdateMode>(i); // newer config, so overwrite
 			}
 		}
 
@@ -7417,9 +7437,10 @@ void NppParameters::createXmlTreeFromGUIParams()
 
 	// <GUIConfig name="noUpdate" intervalDays="15" nextUpdateDate="20161022">no</GUIConfig>
 	{
-		TiXmlElement *element = insertGUIConfigBoolNode(newGUIRoot, L"noUpdate", !_nppGUI._autoUpdateOpt._doAutoUpdate);
+		TiXmlElement *element = insertGUIConfigBoolNode(newGUIRoot, L"noUpdate", !(_nppGUI._autoUpdateOpt._doAutoUpdate != NppGUI::autoupdate_disabled));
 		element->SetAttribute(L"intervalDays", _nppGUI._autoUpdateOpt._intervalDays);
 		element->SetAttribute(L"nextUpdateDate", _nppGUI._autoUpdateOpt._nextUpdateDate.toString().c_str());
+		element->SetAttribute(L"autoUpdateMode", _nppGUI._autoUpdateOpt._doAutoUpdate);
 	}
 
 	// <GUIConfig name="Auto-detection">yes</GUIConfig>	
@@ -7517,7 +7538,7 @@ void NppParameters::createXmlTreeFromGUIParams()
 		insertGUIConfigBoolNode(newGUIRoot, L"SaveAllConfirm", _nppGUI._saveAllConfirm);
 	}
 
-	// <GUIConfig name = "NewDocDefaultSettings" format = "0" encoding = "0" lang = "3" codepage = "-1" openAnsiAsUTF8 = "no" / >
+	// <GUIConfig name = "NewDocDefaultSettings" format = "0" encoding = "0" lang = "3" codepage = "-1" openAnsiAsUTF8 = "no" useContentAsTabName = "no" / >
 	{
 		TiXmlElement *GUIConfigElement = (newGUIRoot->InsertEndChild(TiXmlElement(L"GUIConfig")))->ToElement();
 		GUIConfigElement->SetAttribute(L"name", L"NewDocDefaultSettings");
@@ -7527,6 +7548,7 @@ void NppParameters::createXmlTreeFromGUIParams()
 		GUIConfigElement->SetAttribute(L"codepage", _nppGUI._newDocDefaultSettings._codepage);
 		GUIConfigElement->SetAttribute(L"openAnsiAsUTF8", _nppGUI._newDocDefaultSettings._openAnsiAsUtf8 ? L"yes" : L"no");
 		GUIConfigElement->SetAttribute(L"addNewDocumentOnStartup", _nppGUI._newDocDefaultSettings._addNewDocumentOnStartup ? L"yes" : L"no");
+		GUIConfigElement->SetAttribute(L"useContentAsTabName", _nppGUI._newDocDefaultSettings._useContentAsTabName ? L"yes" : L"no");
 	}
 
 	// <GUIConfig name = "langsExcluded" gr0 = "0" gr1 = "0" gr2 = "0" gr3 = "0" gr4 = "0" gr5 = "0" gr6 = "0" gr7 = "0" langMenuCompact = "yes" / >

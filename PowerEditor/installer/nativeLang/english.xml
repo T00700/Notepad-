@@ -196,14 +196,14 @@ Translation note:
 					<Item id="42025" name="&amp;Save Currently Recorded Macro..."/>
 					<Item id="42026" name="Text Direction RTL"/>
 					<Item id="42027" name="Text Direction LTR"/>
-					<Item id="42028" name="&amp;Set Read-Only"/>
+					<Item id="42028" name="Read-Only in Notepad++"/>
 					<Item id="42029" name="Copy Current File Path"/>
 					<Item id="42030" name="Copy Current Filename"/>
 					<Item id="42031" name="Copy Current Dir. Path"/>
 					<Item id="42087" name="Copy All Filenames"/>
 					<Item id="42088" name="Copy All File Paths"/>
 					<Item id="42032" name="&amp;Run a Macro Multiple Times..."/>
-					<Item id="42033" name="Clear Read-Only Flag"/>
+					<Item id="42033" name="Read-Only Attribute in Windows"/>
 					<Item id="42035" name="Single Line Comment"/>
 					<Item id="42036" name="Single Line Uncomment"/>
 					<Item id="42055" name="Remove Empty Lines"/>
@@ -438,8 +438,8 @@ Translation note:
 				<Item CMDID="41016" name="Move to Recycle Bin"/>
 				<Item CMDID="41014" name="Reload"/>
 				<Item CMDID="41010" name="Print..."/>
-				<Item CMDID="42028" name="Read-Only"/>
-				<Item CMDID="42033" name="Clear Read-Only Flag"/>
+				<Item CMDID="42028" name="Read-Only in Notepad++"/>
+				<Item CMDID="42033" name="Read-Only Attribute in Windows"/>
 				<Item CMDID="2" name="Copy to Clipboard"/>
 				<Item CMDID="42029" name="Copy Full File Path"/>
 				<Item CMDID="42030" name="Copy Filename"/>
@@ -1108,6 +1108,7 @@ Translation note:
 					<Item id="6419" name="New Document"/>
 					<Item id="6420" name="Apply to opened ANSI files"/>
 					<Item id="6432" name="Always open a new document in addition at startup"/>
+					<Item id="6433" name="Use the first line of document as untitled tab name"/>
 				</NewDoc>
 
 				<DefaultDir title="Default Directory">
@@ -1351,13 +1352,18 @@ Translation note:
 						<Element name="DirectWrite (draw to GDI DC)"/>
 						<Element name="DirectWrite (DirectX 11)"/>
 					</ComboBox>
+					<ComboBox id="6364">
+						<Element name="Disable"/>
+						<Element name="Enable on Notepad++ startup"/>
+						<Element name="Enable on Notepad++ exit"/>
+					</ComboBox>
 					<Item id="6308" name="system tray"/>
 					<Item id="6363" name="rendering mode"/>
+					<Item id="6365" name="Auto-updater:"/>
 					<Item id="6312" name="File Status Auto-Detection"/>
 					<Item id="6313" name="Update silently"/>
 					<Item id="6325" name="Scroll to the last line after update"/>
 					<Item id="6322" name="Session file ext.:"/>
-					<Item id="6323" name="Enable Notepad++ auto-updater"/>
 					<Item id="6324" name="Document Switcher (Ctrl+TAB)"/>
 					<Item id="6331" name="Show only filename in title bar"/>
 					<Item id="6334" name="Autodetect character encoding"/>

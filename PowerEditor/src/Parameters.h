@@ -219,8 +219,8 @@ public:
 
 struct sessionFileInfo : public Position
 {
-	sessionFileInfo(const wchar_t* fn, const wchar_t *ln, int encoding, bool userReadOnly,bool isPinned, const Position& pos, const wchar_t *backupFilePath, FILETIME originalFileLastModifTimestamp, const MapPosition & mapPos) :
-		Position(pos), _encoding(encoding), _isUserReadOnly(userReadOnly), _isPinned(isPinned), _originalFileLastModifTimestamp(originalFileLastModifTimestamp), _mapPos(mapPos)
+	sessionFileInfo(const wchar_t* fn, const wchar_t *ln, int encoding, bool userReadOnly,bool isPinned, bool isUntitleTabRenamed, const Position& pos, const wchar_t *backupFilePath, FILETIME originalFileLastModifTimestamp, const MapPosition & mapPos) :
+		Position(pos), _encoding(encoding), _isUserReadOnly(userReadOnly), _isPinned(isPinned), _isUntitledTabRenamed(isUntitleTabRenamed), _originalFileLastModifTimestamp(originalFileLastModifTimestamp), _mapPos(mapPos)
 	{
 		if (fn) _fileName = fn;
 		if (ln)	_langName = ln;
@@ -239,6 +239,7 @@ struct sessionFileInfo : public Position
 	int _individualTabColour = -1;
 	bool _isRTL = false;
 	bool _isPinned = false;
+	bool _isUntitledTabRenamed = false;
 	std::wstring _backupFilePath;
 	FILETIME _originalFileLastModifTimestamp {};
 
@@ -609,6 +610,7 @@ struct NewDocDefaultSettings final
 	LangType _lang = L_TEXT;
 	int _codepage = -1; // -1 when not using
 	bool _addNewDocumentOnStartup = false;
+	bool _useContentAsTabName = false;
 };
 
 
@@ -944,9 +946,10 @@ struct NppGUI final
 	// items with no Notepad++ GUI to set
 	std::wstring _commandLineInterpreter = CMD_INTERPRETER;
 
+	enum AutoUpdateMode { autoupdate_disabled, autoupdate_on_startup, autoupdate_on_exit };
 	struct AutoUpdateOptions
 	{
-		bool _doAutoUpdate = true;
+		AutoUpdateMode _doAutoUpdate = autoupdate_on_startup;
 		int _intervalDays = 15;
 		Date _nextUpdateDate;
 		AutoUpdateOptions(): _nextUpdateDate(Date()) {};
